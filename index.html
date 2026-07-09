@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telltale — circle what sounds like a machine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --room:#17160F;
+    --room-2:#201F16;
+    --paper:#F6F1E1;
+    --paper-edge:#E8E0C8;
+    --pen:#AE1226;
+    --pen-soft:rgba(174,18,38,0.14);
+    --highlight:rgba(247,224,90,0.55);
+    --ink:#2B2A22;
+    --ink-soft:#5A5748;
+    --graphite:#948E77;
+    --fog:#EFEAD9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--room);
+    color:var(--fog);
+    font-family:'JetBrains Mono', monospace;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  ::selection{background:var(--highlight); color:var(--ink);}
+  :focus-visible{outline:2px solid var(--pen); outline-offset:3px;}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
+
+  /* ---------- NAV ---------- */
+  nav{
+    padding:26px 0 20px;
+    border-bottom:1px solid rgba(239,234,217,0.08);
+  }
+  nav .wrap{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .wordmark{
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:0.04em;
+  }
+  .wordmark span{color:var(--pen);}
+  .nav-tag{
+    font-size:12px;
+    color:var(--graphite);
+    letter-spacing:0.02em;
+  }
+  @media (max-width:640px){ .nav-tag{display:none;} }
+
+  /* ---------- INTRO ---------- */
+  .intro{
+    padding:56px 0 40px;
+    max-width:640px;
+  }
+  .intro h1{
+    font-family:'Newsreader', serif;
+    font-weight:500;
+    font-size:clamp(28px,4vw,38px);
+    line-height:1.25;
+    margin:0 0 16px;
+    color:var(--fog);
+  }
+  .intro h1 em{ color:var(--pen); font-style:italic; }
+  .intro p{
+    font-size:14px;
+    line-height:1.7;
+    color:var(--graphite);
+    margin:0;
+  }
+
+  /* ---------- DESK ---------- */
+  .desk{
+    position:relative;
+    padding:20px 0 100px;
+  }
+  .desk-grid{
+    display:grid;
+    grid-template-columns:1fr 300px;
+    gap:0;
+    align-items:start;
+    position:relative;
+  }
+  @media (max-width:860px){
+    .desk-grid{grid-template-columns:1fr;}
+  }
+
+  .page-shadow-cast{
+    position:relative;
+  }
+  .page{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:2px;
+    padding:52px 56px 44px;
+    transform:rotate(-0.6deg);
+    box-shadow:
+      0 2px 0 var(--paper-edge),
+      0 30px 60px -20px rgba(0,0,0,0.55),
+      0 10px 24px -12px rgba(0,0,0,0.4);
+    position:relative;
+    font-family:'Newsreader', serif;
+  }
+  .page::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(0,0,0,0.03), transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(0,0,0,0.025), transparent 45%);
+    pointer-events:none;
+  }
+  .page-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    letter-spacing:0.06em;
+    margin-bottom:26px;
+    text-transform:uppercase;
+  }
+  .page-body{
+    font-size:19px;
+    line-height:1.85;
+  }
+  .flag{
+    position:relative;
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-color:var(--pen);
+    text-decoration-style:wavy;
+    text-decoration-thickness:1.5px;
+    text-underline-offset:4px;
+    padding:1px 2px;
+    border-radius:2px;
+    transition:background .2s;
+  }
+  .flag:hover, .flag:focus-visible, .flag.active{
+    background:var(--highlight);
+  }
+  .stamp{
+    position:absolute;
+    top:-18px;
+    right:-14px;
+    width:118px;
+    height:118px;
+    border:3px solid var(--pen);
+    border-radius:50%;
+    color:var(--pen);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    transform:rotate(-9deg);
+    background:rgba(246,241,225,0.9);
+    font-family:'JetBrains Mono', monospace;
+    text-align:center;
+    box-shadow:0 0 0 1px rgba(174,18,38,0.15) inset;
+  }
+  .stamp .n{
+    font-size:26px;
+    font-weight:700;
+    line-height:1;
+  }
+  .stamp .lbl{
+    font-size:8.5px;
+    letter-spacing:0.06em;
+    margin-top:4px;
+    line-height:1.3;
+    padding:0 8px;
+  }
+  @media (max-width:640px){
+    .page{padding:38px 26px 34px;}
+    .stamp{width:92px; height:92px; top:-14px; right:-10px;}
+    .stamp .n{font-size:20px;}
+    .stamp .lbl{font-size:7.5px;}
+  }
+
+  /* ---------- MARGIN NOTES ---------- */
+  .margin-col{
+    padding:70px 0 0 26px;
+    position:relative;
+  }
+  .note{
+    font-family:'Caveat', cursive;
+    font-size:22px;
+    color:var(--pen);
+    line-height:1.2;
+    margin-bottom:34px;
+    cursor:pointer;
+    transform:rotate(-1deg);
+    transition:transform .15s, opacity .15s;
+    opacity:0.72;
+  }
+  .note:hover, .note:focus-visible, .note.active{
+    opacity:1;
+    transform:rotate(0deg) scale(1.04);
+  }
+  @media (max-width:860px){
+    .margin-col{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px 18px;
+      padding:24px 4px 0;
+    }
+    .note{margin-bottom:6px;}
+  }
+
+  #leaderSvg{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    overflow:visible;
+  }
+  #leaderSvg path{
+    fill:none;
+    stroke:var(--pen);
+    stroke-width:1.4;
+    stroke-dasharray:3 3;
+    opacity:0.75;
+  }
+  @media (max-width:860px){ #leaderSvg{display:none;} }
+
+  /* ---------- TRY YOUR OWN ---------- */
+  .try-panel{
+    margin-top:26px;
+    display:flex;
+    justify-content:flex-end;
+  }
+  .try-btn{
+    background:transparent;
+    border:1px solid rgba(239,234,217,0.25);
+    color:var(--fog);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    padding:11px 18px;
+    border-radius:2px;
+    cursor:pointer;
+    transition:border-color .2s, background .2s;
+  }
+  .try-btn:hover{ border-color:var(--pen); background:rgba(174,18,38,0.08); }
+
+  .editor{
+    display:none;
+    margin-top:18px;
+  }
+  .editor.open{display:block;}
+  .editor textarea{
+    width:100%;
+    min-height:160px;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Newsreader', serif;
+    font-size:17px;
+    line-height:1.7;
+    border:none;
+    border-radius:2px;
+    padding:28px 30px;
+    resize:vertical;
+    box-shadow:0 20px 40px -20px rgba(0,0,0,0.5);
+  }
+  .editor-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:14px;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .grade-btn{
+    background:var(--pen);
+    color:var(--fog);
+    border:none;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    font-weight:500;
+    padding:12px 22px;
+    border-radius:2px;
+    cursor:pointer;
+    transition:background .2s;
+  }
+  .grade-btn:hover{ background:#8f0f1f; }
+  .grade-btn:disabled{ opacity:0.5; cursor:default; }
+  .editor-status{
+    font-size:12px;
+    color:var(--graphite);
+  }
+  .editor-status.err{ color:var(--pen); }
+
+  /* ---------- HOW IT ACTUALLY WORKS (prose, not cards) ---------- */
+  .how{
+    padding:20px 0 90px;
+    max-width:680px;
+  }
+  .how p{
+    font-size:15px;
+    line-height:1.85;
+    color:var(--graphite);
+    margin:0 0 20px;
+  }
+  .how strong{ color:var(--fog); font-weight:500; }
+  .how .signoff{
+    font-family:'Caveat', cursive;
+    font-size:22px;
+    color:var(--pen);
+    margin-top:8px;
+  }
+
+  footer{
+    border-top:1px solid rgba(239,234,217,0.08);
+    padding:26px 0;
+    font-size:12px;
+    color:var(--graphite);
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="wordmark">TELL<span>TALE</span></div>
+    <div class="nav-tag">built to catch its own kind</div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Every model has tics. <em>Here's where yours show.</em></h1>
+    <p>Paste a paragraph and Telltale circles the phrases that read like a machine trying to sound natural — then tells you why, in the margin, like an editor who's seen the pattern before.</p>
+  </div>
+
+  <div class="desk">
+    <div class="desk-grid" id="deskGrid">
+      <div class="page-shadow-cast">
+        <div class="page" id="pageEl">
+          <div class="stamp" id="stampEl">
+            <div class="n" id="stampNum">14</div>
+            <div class="lbl" id="stampLbl">SOUNDS LIKE<br>A MACHINE</div>
+          </div>
+          <div class="page-head">
+            <span>Sample — unsigned draft</span>
+            <span id="wordCount">62 words</span>
+          </div>
+          <div class="page-body" id="pageBody"></div>
+        </div>
+
+        <div class="try-panel">
+          <button class="try-btn" id="tryBtn">Try your own paragraph →</button>
+        </div>
+
+        <div class="editor" id="editorPanel">
+          <textarea id="userText" placeholder="Paste a paragraph you've written or found. A few sentences is plenty.">In today's fast-paced world, effective communication is more important than ever.</textarea>
+          <div class="editor-row">
+            <button class="grade-btn" id="gradeBtn">Mark it up</button>
+            <span class="editor-status" id="editorStatus">Runs entirely in your browser. Nothing is sent anywhere.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="margin-col" id="marginCol"></div>
+      <svg id="leaderSvg"></svg>
+    </div>
+  </div>
+
+  <div class="how">
+    <p><strong>What it's actually doing:</strong> a set of pattern rules built from the phrases that show up over and over in generic AI drafts — stiff transitions, borrowed intensifiers, vague completeness words, empty hedges. Your text never leaves the page; everything runs in the browser, matches the patterns, and scores density against length.</p>
+    <p>It isn't a lie detector and it won't give you a verdict to hide behind. Plenty of stiff sentences are entirely human, and plenty of AI drafts read clean. Treat the circles as a second opinion worth arguing with, not a grade.</p>
+    <p class="signoff">— marked up by an editor who never sleeps</p>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">Telltale is a design and engineering sample. Analysis runs entirely client-side.</div>
+</footer>
+
+<script>
+  const PAPER = {
+    text: "In today's fast-paced world, it is important to note that effective communication plays a crucial role in the success of any team. Furthermore, by leveraging the power of collaboration, organizations can unlock a wide range of benefits that ultimately drive meaningful results.",
+    score: 14,
+    flags: [
+      { quote: "In today's fast-paced world", note: "the tell nobody needed" },
+      { quote: "it is important to note that", note: "so note it, then" },
+      { quote: "Furthermore, by leveraging the power of", note: "leveraging power of what" },
+      { quote: "unlock a wide range of benefits", note: "vague on purpose?" },
+      { quote: "ultimately drive meaningful results", note: "meaningful, how" }
+    ]
+  };
+
+  const pageBody = document.getElementById('pageBody');
+  const marginCol = document.getElementById('marginCol');
+  const leaderSvg = document.getElementById('leaderSvg');
+  const deskGrid = document.getElementById('deskGrid');
+  const stampNum = document.getElementById('stampNum');
+  const stampLbl = document.getElementById('stampLbl');
+  const wordCount = document.getElementById('wordCount');
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function scoreLabel(score){
+    if (score >= 70) return "READS<br>HUMAN";
+    if (score >= 40) return "MIXED<br>SIGNALS";
+    return "SOUNDS LIKE<br>A MACHINE";
+  }
+
+  function render(text, flags, score){
+    // find non-overlapping matches in order of appearance
+    const matches = [];
+    flags.forEach((f, i) => {
+      const idx = text.indexOf(f.quote);
+      if (idx !== -1) matches.push({ start: idx, end: idx + f.quote.length, note: f.note, id: i });
+    });
+    matches.sort((a,b) => a.start - b.start);
+    const clean = [];
+    let cursor = 0;
+    matches.forEach(m => {
+      if (m.start < cursor) return; // skip overlap
+      clean.push(m);
+      cursor = m.end;
+    });
+
+    let html = '';
+    let pos = 0;
+    clean.forEach(m => {
+      html += escapeHtml(text.slice(pos, m.start));
+      html += `<span class="flag" tabindex="0" data-id="${m.id}">${escapeHtml(text.slice(m.start, m.end))}</span>`;
+      pos = m.end;
+    });
+    html += escapeHtml(text.slice(pos));
+    pageBody.innerHTML = html;
+
+    marginCol.innerHTML = clean.map(m =>
+      `<div class="note" tabindex="0" data-id="${m.id}">${escapeHtml(m.note)}</div>`
+    ).join('');
+
+    stampNum.textContent = score;
+    stampLbl.innerHTML = scoreLabel(score);
+
+    const wc = text.trim().split(/\s+/).filter(Boolean).length;
+    wordCount.textContent = wc + " words";
+
+    wireInteractions();
+    // auto-highlight the first pair so the mechanic is visible without interaction
+    if (clean.length){
+      setTimeout(() => activate(clean[0].id), 300);
+    }
+  }
+
+  function clearActive(){
+    document.querySelectorAll('.flag.active, .note.active').forEach(el => el.classList.remove('active'));
+    leaderSvg.innerHTML = '';
+  }
+
+  function activate(id){
+    clearActive();
+    const flagEl = pageBody.querySelector(`.flag[data-id="${id}"]`);
+    const noteEl = marginCol.querySelector(`.note[data-id="${id}"]`);
+    if (!flagEl || !noteEl) return;
+    flagEl.classList.add('active');
+    noteEl.classList.add('active');
+    drawLeader(flagEl, noteEl);
+  }
+
+  function drawLeader(flagEl, noteEl){
+    if (window.innerWidth <= 860) return; // mobile stacks, no leader lines
+    const gridRect = deskGrid.getBoundingClientRect();
+    const fr = flagEl.getBoundingClientRect();
+    const nr = noteEl.getBoundingClientRect();
+    const x1 = fr.right - gridRect.left;
+    const y1 = fr.top + fr.height/2 - gridRect.top;
+    const x2 = nr.left - gridRect.left;
+    const y2 = nr.top + nr.height/2 - gridRect.top;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', `M ${x1} ${y1} C ${x1+50} ${y1}, ${x2-50} ${y2}, ${x2} ${y2}`);
+    leaderSvg.appendChild(path);
+  }
+
+  function wireInteractions(){
+    document.querySelectorAll('.flag').forEach(el => {
+      el.addEventListener('mouseenter', () => activate(el.dataset.id));
+      el.addEventListener('focus', () => activate(el.dataset.id));
+    });
+    document.querySelectorAll('.note').forEach(el => {
+      el.addEventListener('mouseenter', () => activate(el.dataset.id));
+      el.addEventListener('focus', () => activate(el.dataset.id));
+    });
+  }
+
+  render(PAPER.text, PAPER.flags, PAPER.score);
+
+  // ---------- Try your own paragraph (live API call) ----------
+  const tryBtn = document.getElementById('tryBtn');
+  const editorPanel = document.getElementById('editorPanel');
+  const gradeBtn = document.getElementById('gradeBtn');
+  const userText = document.getElementById('userText');
+  const editorStatus = document.getElementById('editorStatus');
+
+  tryBtn.addEventListener('click', () => {
+    const opening = !editorPanel.classList.contains('open');
+    editorPanel.classList.toggle('open');
+    tryBtn.textContent = opening ? "Hide editor ↑" : "Try your own paragraph →";
+  });
+
+  // Real, self-contained analysis — pattern rules + scoring, no network calls.
+  const TELL_PATTERNS = [
+    { re: /\bin today'?s (?:fast-paced|ever-changing|digital) world\b/gi, note: "the tell nobody needed" },
+    { re: /\bit is important to note that\b/gi, note: "so note it, then" },
+    { re: /\bit'?s worth noting that\b/gi, note: "worth noting, or just say it" },
+    { re: /\bfurthermore\b/gi, note: "stiff transition" },
+    { re: /\bmoreover\b/gi, note: "stiff transition" },
+    { re: /\bin conclusion\b/gi, note: "essay-bot opener" },
+    { re: /\bleverage(?:d|s|ing)?\b/gi, note: "just say use" },
+    { re: /\bunlock(?:s|ed|ing)? (?:the|a) (?:power|potential)\b/gi, note: "unlock what, exactly" },
+    { re: /\bwide range of\b/gi, note: "vague on purpose?" },
+    { re: /\bplays? a crucial role\b/gi, note: "crucial how" },
+    { re: /\bdrive meaningful (?:results|impact|change)\b/gi, note: "meaningful, how" },
+    { re: /\bdelve into\b/gi, note: "classic filler verb" },
+    { re: /\bnavigate the complexit(?:y|ies)\b/gi, note: "navigate, complexities, sure" },
+    { re: /\bat the end of the day\b/gi, note: "says nothing" },
+    { re: /\bseamless(?:ly)?\b/gi, note: "nothing is ever seamless" },
+    { re: /\bcutting-edge\b/gi, note: "cutting edge of what" },
+    { re: /\bgame-chang(?:er|ing)\b/gi, note: "is it, though" },
+    { re: /\bin the realm of\b/gi, note: "just name the thing" },
+    { re: /\brobust\b/gi, note: "vague strength word" },
+    { re: /\bholistic\b/gi, note: "vague completeness word" },
+    { re: /\bfoster(?:s|ed|ing)? (?:a sense of|collaboration|growth)\b/gi, note: "foster what, concretely" },
+    { re: /\bpaves? the way for\b/gi, note: "borrowed image" },
+    { re: /\bultimately\b/gi, note: "hedge word" }
+  ];
+
+  function analyzeLocally(text){
+    const found = [];
+    const seen = new Set();
+    TELL_PATTERNS.forEach(p => {
+      const re = new RegExp(p.re.source, p.re.flags);
+      let m;
+      while ((m = re.exec(text)) !== null){
+        const quote = m[0];
+        const key = quote.toLowerCase();
+        if (!seen.has(key)){
+          seen.add(key);
+          found.push({ quote, note: p.note, start: m.index });
+        }
+        if (found.length >= 8) break;
+      }
+    });
+    found.sort((a,b) => a.start - b.start);
+
+    const wordCount = text.trim().split(/\s+/).filter(Boolean).length || 1;
+    const density = found.length / (wordCount / 40); // tells per ~40 words
+    let score = Math.round(100 - Math.min(90, density * 32) - found.length * 4);
+    score = Math.max(4, Math.min(97, score));
+
+    return { score, flags: found.map(f => ({ quote: f.quote, note: f.note })) };
+  }
+
+  gradeBtn.addEventListener('click', () => {
+    const text = userText.value.trim();
+    if (!text){ editorStatus.textContent = "Paste something first."; editorStatus.classList.add('err'); return; }
+
+    editorStatus.classList.remove('err');
+    const { score, flags } = analyzeLocally(text);
+
+    render(text, flags, score);
+    editorStatus.textContent = flags.length
+      ? "Marked up. Hover a circle or a note to see the connection."
+      : "Nothing jumped out. That's a good sign.";
+  });
+
+  window.addEventListener('resize', clearActive);
+</script>
+
+</body>
+</html>
