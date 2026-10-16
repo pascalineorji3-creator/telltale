@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Telltale admin</title>
+<style>
+  body{margin:0;background:#17160F;color:#EFEAD9;font:15px/1.6 ui-monospace,Menlo,monospace;padding:24px}
+  .w{max-width:520px;margin:0 auto}
+  h1{font-size:18px}
+  label{display:block;font-size:12px;color:#948E77;margin:14px 0 4px}
+  input{width:100%;padding:12px;background:#201F16;color:#EFEAD9;border:1px solid #444;border-radius:2px;font:inherit}
+  button{margin-top:16px;background:#AE1226;color:#EFEAD9;border:0;padding:12px 20px;font:inherit;cursor:pointer}
+  #out{margin-top:18px;word-break:break-all;background:#201F16;padding:14px;border:1px solid #444}
+  .m{font-size:12px;color:#948E77;margin-top:10px}
+</style>
+</head>
+<body><div class="w">
+  <h1>Create a Pro license key</h1>
+  <p class="m">For marketplaces without a license API. Paste the key into the marketplace's delivery message or email it to the buyer.</p>
+  <label>Admin secret<input id="s" type="password" autocomplete="off"></label>
+  <label>Buyer email<input id="e" type="email"></label>
+  <label>Valid for how many days (0 = never expires)<input id="d" type="number" value="365" min="0"></label>
+  <button id="go">Create key</button>
+  <div id="out" hidden></div>
+  <p class="m" id="m"></p>
+</div>
+<script>
+  document.getElementById('go').onclick = async () => {
+    const out = document.getElementById('out'), m = document.getElementById('m');
+    m.textContent = '';
+    try {
+      const r = await fetch('/.netlify/functions/mintkey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': document.getElementById('s').value },
+        body: JSON.stringify({ email: document.getElementById('e').value, days: Number(document.getElementById('d').value) })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed');
+      out.hidden = false;
+      out.textContent = d.key;
+      m.textContent = 'Key id: ' + d.id + '. To revoke this key later, add that id to the REVOKED_KEYS setting in Netlify and redeploy.';
+    } catch (e){ out.hidden = true; m.textContent = e.message; }
+  };
+</script></body></html>
