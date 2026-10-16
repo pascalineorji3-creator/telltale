@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telltale Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root{--room:#17160F;--room-2:#201F16;--paper:#F6F1E1;--pen:#AE1226;--ink:#2B2A22;--graphite:#948E77;--fog:#EFEAD9;--ok:#7bc08f;--warn:#e0b45a}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--room);color:var(--fog);font-family:'JetBrains Mono',monospace;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--pen);outline-offset:3px}
+  .wrap{max-width:900px;margin:0 auto;padding:0 22px}
+  nav{padding:24px 0 18px;border-bottom:1px solid rgba(239,234,217,.08)}
+  nav .wrap{display:flex;justify-content:space-between;align-items:baseline}
+  .wm{font-size:16px;font-weight:600;letter-spacing:.04em;text-decoration:none}.wm span{color:var(--pen)}
+  .badge{font-size:11px;letter-spacing:.08em;color:var(--pen);border:1px solid var(--pen);padding:2px 8px;margin-left:8px}
+  nav a.back{font-size:12.5px;color:var(--graphite);text-decoration:none}
+  h1{font-family:'Newsreader',serif;font-weight:500;font-size:clamp(28px,5vw,40px);line-height:1.2;margin:40px 0 12px}
+  h1 em{color:var(--pen)}
+  .sub{font-size:14px;line-height:1.75;color:var(--graphite);max-width:62ch;margin:0 0 26px}
+  .card{border:1px solid rgba(239,234,217,.1);background:var(--room-2);padding:22px;margin-bottom:18px}
+  .card h2{margin:0 0 12px;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--graphite)}
+  ul.f{margin:0;padding-left:18px;font-size:13.5px;line-height:1.9;color:var(--fog)}
+  ul.f small{color:var(--graphite)}
+  label{display:block;font-size:11.5px;letter-spacing:.04em;color:var(--graphite);margin-bottom:12px}
+  input[type=text],input[type=email],textarea{width:100%;margin-top:6px;background:var(--room);color:var(--fog);border:1px solid rgba(239,234,217,.2);border-radius:2px;padding:12px;font:14px 'JetBrains Mono',monospace}
+  textarea{min-height:200px;resize:vertical;background:var(--paper);color:var(--ink);font:16px/1.7 'Newsreader',serif;border:none;padding:22px}
+  .btn{background:var(--pen);color:var(--fog);border:none;font:500 13px 'JetBrains Mono',monospace;padding:12px 22px;border-radius:2px;cursor:pointer}
+  .btn:disabled{opacity:.5;cursor:default}
+  .ghost{background:transparent;border:1px solid rgba(239,234,217,.25);color:var(--fog);font:12.5px 'JetBrains Mono',monospace;padding:11px 16px;border-radius:2px;cursor:pointer;text-decoration:none;display:inline-block}
+  .ghost:hover{border-color:var(--pen)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .msg{font-size:12.5px;line-height:1.6;color:var(--graphite);margin:12px 0 0}
+  .msg.err{color:#ff8f86}
+  [hidden]{display:none!important}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+  .m{border:1px solid rgba(239,234,217,.1);padding:12px}
+  .mv{font-family:'Newsreader',serif;font-size:24px}.ml{font-size:11px;color:var(--graphite);margin-top:6px}
+  .sum{font-family:'Newsreader',serif;font-size:17px;line-height:1.6;margin:0 0 14px}
+  .prow{display:grid;grid-template-columns:44px 74px 1fr;gap:10px;align-items:start;border-top:1px solid rgba(239,234,217,.08);padding:10px 0;font-size:13px;line-height:1.55}
+  .chip{font-size:11px;letter-spacing:.04em;padding:2px 8px;border:1px solid;text-align:center}
+  .chip.low{color:var(--ok)}.chip.mixed{color:var(--warn)}.chip.high{color:#ff8f86}
+  .prow .n{color:var(--graphite)}
+  .pill{display:inline-block;font-size:11px;color:var(--ok);border:1px solid var(--ok);padding:2px 8px;letter-spacing:.06em}
+  footer{border-top:1px solid rgba(239,234,217,.08);padding:24px 0 40px;margin-top:30px;font-size:12px;color:var(--graphite)}
+  .filebtn{display:inline-block}
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <div><a class="wm" href="/">TELL<span>TALE</span></a><span class="badge">PRO</span></div>
+  <a class="back" href="/">Back to Telltale</a>
+</div></nav>
+
+<div class="wrap">
+
+  <!-- NOT REGISTERED: sign-in page -->
+  <section id="gate" hidden>
+    <h1>Telltale <em>Pro</em></h1>
+    <p class="sub">Sign in with the license key you received when you bought Pro. Your device is registered when you sign in, and each license works on a limited number of devices. Keys are checked on our server, so only a real, paid license works.</p>
+    <div class="card">
+      <h2>What Pro unlocks</h2>
+      <ul class="f">
+        <li>Deep AI review: every paragraph of a long document, with a note on each</li>
+        <li>Up to 30,000 characters per AI run (free: 8,000)</li>
+        <li>Higher request limits</li>
+        <li><small>Coming later: synced history across devices, team workspaces, API access</small></li>
+      </ul>
+      <div class="row" id="buyRow" hidden><a class="btn" id="buyLink" href="#" style="text-decoration:none;display:inline-block">Get a Pro license</a></div>
+      <p class="msg" id="noBuy">The purchase link is not live yet. If you already have a key, sign in below.</p>
+    </div>
+    <div class="card">
+      <h2>Sign in</h2>
+      <label>License key<input type="text" id="key" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>
+      <label>Email used for the purchase<input type="email" id="email" autocomplete="email" placeholder="you@example.com"></label>
+      <button class="btn" id="signIn" type="button">Register this device</button>
+      <p class="msg" id="gateMsg"></p>
+    </div>
+  </section>
+
+  <!-- REGISTERED: Pro workspace -->
+  <section id="app" hidden>
+    <h1>Pro <em>workspace</em></h1>
+    <p class="sub"><span class="pill">PRO ACTIVE</span> &nbsp;This device is registered. Paste or upload a long document and get a paragraph-by-paragraph read. These are signals, not proof of who wrote the text.</p>
+    <div class="card">
+      <h2>Deep document review</h2>
+      <textarea id="doc" placeholder="Paste your document here. Separate paragraphs with a blank line."></textarea>
+      <div class="row">
+        <button class="btn" id="run" type="button">Run deep review</button>
+        <label class="ghost filebtn" style="margin:0">Upload .txt, .docx or .pdf<input type="file" id="fileIn" accept=".txt,.md,.docx,.pdf" hidden></label>
+        <span class="msg" id="wc" style="margin:0"></span>
+      </div>
+      <p class="msg" id="appMsg">Your text is sent to an AI service for this review. Only use text you are comfortable sharing.</p>
+    </div>
+    <div class="card" id="results" hidden></div>
+    <div class="row"><button class="ghost" id="signOut" type="button">Sign out of this device</button></div>
+    <p class="msg" id="signMsg"></p>
+  </section>
+
+  <p class="msg" id="boot">Checking your license…</p>
+</div>
+<footer><div class="wrap">Telltale Pro. Signals, not proof. Licenses are verified on the server.</div></footer>
+
+<script>
+  // Paste your marketplace product link here when it is ready, e.g. "https://yourstore.example/telltale-pro"
+  const BUY_URL = "";
+
+  const API = "/.netlify/functions/";
+  const LKEY = "tt_lic";
+  const $ = s => document.querySelector(s);
+  let token = "";
+
+  const lic = () => { try { return JSON.parse(localStorage.getItem(LKEY) || "null"); } catch (e){ return null; } };
+  const setLic = o => { try { o ? localStorage.setItem(LKEY, JSON.stringify(o)) : localStorage.removeItem(LKEY); } catch (e){} };
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  function deviceName(did){
+    return (/Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'Phone ' : 'Computer ') + did;
+  }
+
+  async function api(name, payload){
+    const r = await fetch(API + name, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok){ const e = new Error(d.error || 'Something went wrong. Try again.'); e.status = r.status; throw e; }
+    return d;
+  }
+
+  function show(which, msg){
+    $('#boot').hidden = true;
+    $('#gate').hidden = which !== 'gate';
+    $('#app').hidden = which !== 'app';
+    if (which === 'gate'){
+      if (BUY_URL){ $('#buyRow').hidden = false; $('#noBuy').hidden = true; $('#buyLink').href = BUY_URL; }
+      $('#gateMsg').textContent = msg || '';
+      $('#gateMsg').className = 'msg' + (msg ? ' err' : '');
+    }
+  }
+
+  async function boot(){
+    const l = lic();
+    if (!l){ show('gate'); return; }
+    try {
+      const d = await api('license', { action: 'check', key: l.key, instance: l.instance });
+      token = d.token;
+      show('app');
+    } catch (e){
+      if (e instanceof TypeError){
+        $('#boot').hidden = false;
+        $('#boot').textContent = 'You seem to be offline. Reconnect and reload this page.';
+      } else {
+        setLic(null);
+        show('gate', e.message);
+      }
+    }
+  }
+
+  $('#signIn').addEventListener('click', async () => {
+    const key = $('#key').value.trim(), email = $('#email').value.trim();
+    const m = $('#gateMsg');
+    m.className = 'msg';
+    if (!key){ m.textContent = 'Enter your license key.'; m.className = 'msg err'; return; }
+    $('#signIn').disabled = true;
+    m.textContent = 'Checking your license…';
+    try {
+      const did = Math.random().toString(36).slice(2, 6);
+      const d = await api('license', { action: 'activate', key, email, device: deviceName(did) });
+      setLic({ key, instance: d.instance, did });
+      token = d.token;
+      show('app');
+    } catch (e){
+      m.textContent = e instanceof TypeError ? 'Could not connect. Check your internet and try again.' : e.message;
+      m.className = 'msg err';
+    }
+    $('#signIn').disabled = false;
+  });
+
+  $('#signOut').addEventListener('click', async () => {
+    const l = lic();
+    try { if (l) await api('license', { action: 'deactivate', key: l.key, instance: l.instance }); } catch (e){}
+    setLic(null);
+    token = '';
+    location.reload();
+  });
+
+  // ---- file loading (all in the browser) ----
+  if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  async function pdfToText(buf){
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const pages = [];
+    for (let n = 1; n <= Math.min(pdf.numPages, 60); n++){
+      const c = await (await pdf.getPage(n)).getTextContent();
+      const lines = [];
+      let cur = '', lastY = null, h = 0;
+      c.items.forEach(it => {
+        const y = it.transform[5];
+        if (lastY !== null && Math.abs(y - lastY) > 2){ lines.push({ t: cur.trim(), y: lastY }); cur = ''; }
+        cur += it.str + (it.hasEOL ? ' ' : '');
+        lastY = y;
+        h = Math.max(h, Math.abs(it.height || 0));
+      });
+      if (cur.trim()) lines.push({ t: cur.trim(), y: lastY });
+      let page = '';
+      lines.forEach((l, i) => { if (i) page += Math.abs(lines[i-1].y - l.y) > h * 1.9 ? '\n\n' : ' '; page += l.t; });
+      pages.push(page);
+    }
+    return pages.join('\n\n');
+  }
+  function count(){
+    const w = $('#doc').value.split(/\s+/).filter(Boolean).length;
+    $('#wc').textContent = w ? w + ' words' : '';
+  }
+  $('#doc').addEventListener('input', count);
+  $('#fileIn').addEventListener('change', async ev => {
+    const f = ev.target.files[0];
+    if (!f) return;
+    const m = $('#appMsg');
+    m.className = 'msg';
+    try {
+      let t = '';
+      if (/\.docx$/i.test(f.name)){
+        if (!window.mammoth) throw new Error('The .docx reader did not load.');
+        t = (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value;
+      } else if (/\.pdf$/i.test(f.name)){
+        if (!window.pdfjsLib) throw new Error('The PDF reader did not load.');
+        m.textContent = 'Reading the PDF in your browser…';
+        t = await pdfToText(await f.arrayBuffer());
+        if (!t.trim()) throw new Error('No selectable text found. This looks like a scanned PDF.');
+      } else { t = await f.text(); }
+      $('#doc').value = t.trim().slice(0, 30000);
+      count();
+      m.textContent = 'Loaded ' + f.name + '. The AI review reads up to 30,000 characters.';
+    } catch (e){ m.textContent = e.message || 'Could not read that file.'; m.className = 'msg err'; }
+    ev.target.value = '';
+  });
+
+  // ---- deep review ----
+  async function review(retry){
+    const text = $('#doc').value.trim();
+    const m = $('#appMsg');
+    m.className = 'msg';
+    if (text.split(/\s+/).filter(Boolean).length < 60){ m.textContent = 'Add at least 60 words.'; m.className = 'msg err'; return; }
+    $('#run').disabled = true;
+    m.textContent = 'The editor is reading every paragraph…';
+    try {
+      const d = await api('analyze', { mode: 'document', text, token });
+      draw(d.result || {});
+      m.textContent = 'Done. Signals, not proof.';
+    } catch (e){
+      if (e.status === 403 && !retry){
+        // session expired: re-check the license and try once more
+        try { const l = lic(); const c = await api('license', { action: 'check', key: l.key, instance: l.instance }); token = c.token; $('#run').disabled = false; return review(true); }
+        catch (x){ setLic(null); show('gate', x.message); return; }
+      }
+      m.textContent = e instanceof TypeError ? 'Could not connect. Try again.' : e.message;
+      m.className = 'msg err';
+    }
+    $('#run').disabled = false;
+  }
+  $('#run').addEventListener('click', () => review(false));
+
+  function draw(r){
+    const box = $('#results');
+    const ps = Array.isArray(r.paragraphs) ? r.paragraphs : [];
+    const lv = x => ['low','mixed','high'].includes(String(x).toLowerCase()) ? String(x).toLowerCase() : 'mixed';
+    const counts = { low: 0, mixed: 0, high: 0 };
+    ps.forEach(p => counts[lv(p.level)]++);
+    const o = r.overall || {};
+    box.innerHTML = '<h2>Review</h2>' +
+      '<div class="metrics"><div class="m"><div class="mv">' + esc(String(lv(o.level)).toUpperCase()) + '</div><div class="ml">Overall signals</div></div>' +
+      '<div class="m"><div class="mv">' + ps.length + '</div><div class="ml">Paragraphs read</div></div>' +
+      '<div class="m"><div class="mv">' + counts.high + '</div><div class="ml">High-signal paragraphs</div></div></div>' +
+      (o.summary ? '<p class="sum">' + esc(o.summary) + '</p>' : '') +
+      ps.map(p => '<div class="prow"><span class="n">¶ ' + esc(p.n) + '</span><span class="chip ' + lv(p.level) + '">' + lv(p.level).toUpperCase() + '</span><span>' + esc(p.note || '') + '</span></div>').join('');
+    box.hidden = false;
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  boot();
+</script>
+</body>
+</html>
