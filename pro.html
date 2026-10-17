@@ -70,10 +70,9 @@
         <li>Deep AI review: every paragraph of a long document, with a note on each</li>
         <li>Up to 30,000 characters per AI run (free: 8,000)</li>
         <li>Higher request limits</li>
-        <li><small>Coming later: synced history across devices, team workspaces, API access</small></li>
+        <li>Registered devices, verified on the server</li>
       </ul>
-      <div class="row" id="buyRow" hidden><a class="btn" id="buyLink" href="#" style="text-decoration:none;display:inline-block">Get a Pro license</a></div>
-      <p class="msg" id="noBuy">The purchase link is not live yet. If you already have a key, sign in below.</p>
+      <div class="row" id="buyRow"><a class="btn" id="buyLink" href="#" style="text-decoration:none;display:inline-block">Request a Pro license</a></div>
     </div>
     <div class="card">
       <h2>Sign in</h2>
@@ -108,7 +107,8 @@
 <footer><div class="wrap">Telltale Pro. Signals, not proof. Licenses are verified on the server.</div></footer>
 
 <script>
-  // Paste your marketplace product link here when it is ready, e.g. "https://yourstore.example/telltale-pro"
+  // Where "Get a Pro license" goes. Replace with your marketplace product link when you have one.
+  // Optional: paste your marketplace product link here. If empty, the button opens the license request form.
   const BUY_URL = "";
 
   const API = "/.netlify/functions/";
@@ -136,7 +136,7 @@
     $('#gate').hidden = which !== 'gate';
     $('#app').hidden = which !== 'app';
     if (which === 'gate'){
-      if (BUY_URL){ $('#buyRow').hidden = false; $('#noBuy').hidden = true; $('#buyLink').href = BUY_URL; }
+      $('#buyLink').href = BUY_URL || '/#request';
       $('#gateMsg').textContent = msg || '';
       $('#gateMsg').className = 'msg' + (msg ? ' err' : '');
     }
