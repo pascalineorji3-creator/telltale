@@ -13,6 +13,10 @@ const DOC_PROMPT = `You review a longer document paragraph by paragraph for patt
 The paragraphs are numbered like [1], [2]. Return ONLY JSON: {"overall":{"level":"low"|"mixed"|"high","summary":"2 sentences in plain language"},"paragraphs":[{"n":1,"level":"low"|"mixed"|"high","note":"one short sentence naming the specific pattern, or what sounds natural"}]}
 Include every numbered paragraph, in order.`;
 
+const MS_PROMPT = `You review one section of a fiction manuscript for patterns often associated with AI-generated prose. You can NOT prove authorship and must never claim certainty. Skilled human novelists also write clean, polished prose, so be conservative and judge only on specific patterns: repeated sentence beats and rhythm, tidy lists of three, stock emotional phrases (for example "a mix of X and Y"), generic physical reactions, dialogue tags and stage business repeated mechanically, summary-style paragraph endings, feelings explained after the scene already showed them, uniform paragraph length, and vague sensory detail. Also note what sounds distinctly human: specific, odd or personal detail, uneven rhythm, a clear voice.
+Return ONLY JSON: {"level":"low"|"mixed"|"high","summary":"2 sentences in plain language","patterns":["short pattern name with a brief note"],"standouts":[{"quote":"exact excerpt of at most 12 words","why":"short reason"}],"human_markers":["short observation"]}
+Give at most 4 patterns, 3 standouts and 2 human_markers. Quote text exactly as written.`;
+
 const hits = new Map();
 
 exports.handler = async (event) => {
@@ -27,8 +31,8 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch { return send(400, { error: "Bad request." }); }
 
   const pro = !!readToken(body.token, process.env.LICENSE_SECRET);
-  const mode = body.mode === "rewrite" ? "rewrite" : body.mode === "document" ? "document" : "analyze";
-  if (mode === "document" && !pro) return send(403, { error: "Deep document review is a Pro feature. Sign in on the Pro page." });
+  const mode = body.mode === "rewrite" ? "rewrite" : body.mode === "document" ? "document" : body.mode === "manuscript" ? "manuscript" : "analyze";
+  if ((mode === "document" || mode === "manuscript") && !pro) return send(403, { error: "This is a Pro feature. Sign in on the Pro page." });
 
   const ip = ((event.headers["x-nf-client-connection-ip"] || event.headers["x-forwarded-for"] || "anon") + "").split(",")[0].trim();
   const now = Date.now();
@@ -37,10 +41,13 @@ exports.handler = async (event) => {
   recent.push(now);
   hits.set(ip, recent);
 
-  const text = String(body.text || "").trim().slice(0, pro ? 30000 : 8000);
+  const cap = mode === "manuscript" ? 15000 : pro ? 30000 : 8000;
+  const full = String(body.text || "").trim();
+  const text = full.slice(0, cap);
+  const truncated = full.length > cap;
   if (text.split(/\s+/).filter(Boolean).length < 60) return send(400, { error: "Paste at least 60 words so there is enough to analyze." });
 
-  let prompt = mode === "rewrite" ? REWRITE_PROMPT : mode === "document" ? DOC_PROMPT : PROMPT;
+  let prompt = mode === "rewrite" ? REWRITE_PROMPT : mode === "document" ? DOC_PROMPT : mode === "manuscript" ? MS_PROMPT : PROMPT;
   let input = text;
   if (mode === "document") {
     const paras = text.split(/\n\s*\n/).map((s) => s.trim()).filter((s) => s.split(/\s+/).length >= 15).slice(0, 40);
@@ -56,7 +63,7 @@ exports.handler = async (event) => {
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: `${prompt}\n\nTEXT:\n${input}` }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: mode === "document" ? 3500 : 1500, responseMimeType: "application/json" }
+        generationConfig: { temperature: 0.2, maxOutputTokens: mode === "document" ? 3500 : mode === "manuscript" ? 1800 : 1500, responseMimeType: "application/json" }
       })
     });
   } catch {
@@ -73,7 +80,7 @@ exports.handler = async (event) => {
   const out = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
   if (!out) return send(502, { error: "The AI returned no answer. Try again." });
   try {
-    return send(200, { result: JSON.parse(out.replace(/^```(?:json)?|```$/g, "").trim()), pro });
+    return send(200, { result: JSON.parse(out.replace(/^```(?:json)?|```$/g, "").trim()), pro, truncated, limit: cap });
   } catch {
     return send(502, { error: "The AI answer could not be read. Try again." });
   }
