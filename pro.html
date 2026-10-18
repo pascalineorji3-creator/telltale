@@ -50,6 +50,21 @@
   .pill{display:inline-block;font-size:11px;color:var(--ok);border:1px solid var(--ok);padding:2px 8px;letter-spacing:.06em}
   footer{border-top:1px solid rgba(239,234,217,.08);padding:24px 0 40px;margin-top:30px;font-size:12px;color:var(--graphite)}
   .filebtn{display:inline-block}
+  .strip{display:flex;gap:3px;flex-wrap:wrap;margin:12px 0 18px}
+  .seg{flex:1 0 14px;max-width:34px;height:24px;display:block}
+  .seg.low{background:var(--ok)}.seg.mixed{background:var(--warn)}.seg.high{background:#e0645a}.seg.none{background:rgba(239,234,217,.12)}
+  #msResults details{border-top:1px solid rgba(239,234,217,.08);padding:10px 0}
+  #msResults summary{cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center}
+  #msResults .pd{font-size:13px;line-height:1.65;color:var(--graphite);padding:8px 0 4px 4px}
+  #msResults .pd ul{margin:6px 0;padding-left:18px;color:var(--fog)}
+  @media print{
+    body *{visibility:hidden}
+    #msResults,#msResults *{visibility:visible}
+    #msResults{position:absolute;left:0;top:0;width:100%;padding:20px;background:#fff!important}
+    #msResults *{color:#000!important;background:transparent!important;border-color:#999!important}
+    #msResults button,#msResults .btns2{display:none!important}
+    #msResults .seg{background:#999!important}
+  }
 </style>
 </head>
 <body>
@@ -69,6 +84,7 @@
       <ul class="f">
         <li>Deep AI review: every paragraph of a long document, with a note on each</li>
         <li>Up to 30,000 characters per AI run (free: 8,000)</li>
+        <li>Manuscript mode: whole novels reviewed chapter by chapter, with one combined report</li>
         <li>Higher request limits</li>
         <li>Registered devices, verified on the server</li>
       </ul>
@@ -98,6 +114,19 @@
       <p class="msg" id="appMsg">Your text is sent to an AI service for this review. Only use text you are comfortable sharing.</p>
     </div>
     <div class="card" id="results" hidden></div>
+    <div class="card" id="msCard">
+      <h2>Manuscript mode</h2>
+      <p class="msg" style="margin:0 0 14px">For long fiction. The manuscript is split into parts at chapter breaks and reviewed part by part, with one combined report. Up to 600,000 characters, about 100,000 words.</p>
+      <textarea id="ms" placeholder="Paste your manuscript here, or upload a file."></textarea>
+      <div class="row">
+        <label class="ghost filebtn" style="margin:0">Upload .txt, .docx or .pdf<input type="file" id="msFile" accept=".txt,.md,.docx,.pdf" hidden></label>
+        <button class="btn" id="msPlan" type="button">Prepare review</button>
+        <span class="msg" id="msStat" style="margin:0"></span>
+      </div>
+      <div class="row" id="msGo" hidden><button class="btn" id="msRun" type="button">Start review</button><button class="ghost" id="msStop" type="button" hidden>Stop</button></div>
+      <p class="msg" id="msMsg"></p>
+    </div>
+    <div class="card" id="msResults" hidden></div>
     <div class="row"><button class="ghost" id="signOut" type="button">Sign out of this device</button></div>
     <p class="msg" id="signMsg"></p>
   </section>
@@ -190,10 +219,10 @@
 
   // ---- file loading (all in the browser) ----
   if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  async function pdfToText(buf){
+  async function pdfToText(buf, maxPages = 60){
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     const pages = [];
-    for (let n = 1; n <= Math.min(pdf.numPages, 60); n++){
+    for (let n = 1; n <= Math.min(pdf.numPages, maxPages); n++){
       const c = await (await pdf.getPage(n)).getTextContent();
       const lines = [];
       let cur = '', lastY = null, h = 0;
@@ -234,7 +263,7 @@
       } else { t = await f.text(); }
       $('#doc').value = t.trim().slice(0, 30000);
       count();
-      m.textContent = 'Loaded ' + f.name + '. The AI review reads up to 30,000 characters.';
+      m.textContent = 'Loaded ' + f.name + '. ' + (t.trim().length > 30000 ? 'Only the first 30,000 characters were loaded. Use Manuscript mode below for longer text.' : 'The AI review reads up to 30,000 characters.');
     } catch (e){ m.textContent = e.message || 'Could not read that file.'; m.className = 'msg err'; }
     ev.target.value = '';
   });
@@ -250,7 +279,7 @@
     try {
       const d = await api('analyze', { mode: 'document', text, token });
       draw(d.result || {});
-      m.textContent = 'Done. Signals, not proof.';
+      m.textContent = 'Done. Signals, not proof.' + (d.truncated ? ' Only the first ' + Number(d.limit || 30000).toLocaleString() + ' characters were reviewed. Use Manuscript mode below for the whole text.' : '');
     } catch (e){
       if (e.status === 403 && !retry){
         // session expired: re-check the license and try once more
@@ -278,6 +307,205 @@
       (o.summary ? '<p class="sum">' + esc(o.summary) + '</p>' : '') +
       ps.map(p => '<div class="prow"><span class="n">¶ ' + esc(p.n) + '</span><span class="chip ' + lv(p.level) + '">' + lv(p.level).toUpperCase() + '</span><span>' + esc(p.note || '') + '</span></div>').join('');
     box.hidden = false;
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---------- Manuscript mode (long fiction) ----------
+  const MS_CAP = 600000, CHUNK = 10000;
+  let msChunks = [], msStopFlag = false;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  async function readFileText(f, pages){
+    if (/\.docx$/i.test(f.name)){
+      if (!window.mammoth) throw new Error('The .docx reader did not load.');
+      return (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value;
+    }
+    if (/\.pdf$/i.test(f.name)){
+      if (!window.pdfjsLib) throw new Error('The PDF reader did not load.');
+      const t = await pdfToText(await f.arrayBuffer(), pages);
+      if (!t.trim()) throw new Error('No selectable text found. This looks like a scanned PDF.');
+      return t;
+    }
+    return f.text();
+  }
+
+  function chunkText(t, size = CHUNK){
+    let paras = t.split(/\n\s*\n/);
+    if (paras.length < 3) paras = t.split(/\n/);
+    const head = /^\s*(chapter\s+[\w-]+|part\s+[\w-]+|prologue|epilogue)\b/i;
+    const chunks = [];
+    let cur = [], len = 0, label = '';
+    const push = () => {
+      if (cur.join('').trim()){
+        chunks.push({ label: label || ('Part ' + (chunks.length + 1)), text: cur.join('\n\n') });
+      }
+      cur = []; len = 0; label = '';
+    };
+    paras.forEach(raw => {
+      const p = raw.trim();
+      if (!p) return;
+      const isHead = head.test(p.split('\n')[0]) && p.length < 90;
+      if (isHead && len >= 3000) push();
+      if (isHead && !label) label = p.slice(0, 40);
+      const pieces = p.length > size ? (p.match(new RegExp('[\\s\\S]{1,' + size + '}(?:\\s|$)', 'g')) || [p]) : [p];
+      pieces.forEach(pc => {
+        if (len + pc.length > size && len > 0) push();
+        cur.push(pc.trim());
+        len += pc.length;
+      });
+    });
+    push();
+    // merge any very small part into its neighbour so every request has enough text
+    for (let i = chunks.length - 1; i >= 0; i--){
+      if (chunks.length > 1 && chunks[i].text.length < 600){
+        const into = i > 0 ? i - 1 : 1;
+        if (i > 0) chunks[into].text += '\n\n' + chunks[i].text;
+        else chunks[into].text = chunks[i].text + '\n\n' + chunks[into].text;
+        chunks.splice(i, 1);
+      }
+    }
+    return chunks;
+  }
+
+  function msStat(){
+    const t = $('#ms').value;
+    const w = t.split(/\s+/).filter(Boolean).length;
+    $('#msStat').textContent = t.trim() ? w.toLocaleString() + ' words, ' + t.length.toLocaleString() + ' characters' : '';
+    $('#msGo').hidden = true;
+    msChunks = [];
+  }
+  $('#ms').addEventListener('input', msStat);
+
+  $('#msFile').addEventListener('change', async ev => {
+    const f = ev.target.files[0];
+    if (!f) return;
+    const m = $('#msMsg');
+    m.className = 'msg';
+    m.textContent = 'Reading ' + f.name + ' in your browser…';
+    try {
+      let t = (await readFileText(f, 400)).trim();
+      const was = t.length;
+      t = t.slice(0, MS_CAP);
+      $('#ms').value = t;
+      msStat();
+      m.textContent = 'Loaded ' + f.name + '.' + (was > MS_CAP ? ' Only the first 600,000 characters were loaded.' : '') + ' Tap Prepare review.';
+    } catch (e){ m.textContent = e.message || 'Could not read that file.'; m.className = 'msg err'; }
+    ev.target.value = '';
+  });
+
+  $('#msPlan').addEventListener('click', () => {
+    let t = $('#ms').value.trim();
+    const m = $('#msMsg');
+    m.className = 'msg';
+    if (t.split(/\s+/).filter(Boolean).length < 200){ m.textContent = 'Add at least 200 words.'; m.className = 'msg err'; return; }
+    let note = '';
+    if (t.length > MS_CAP){ t = t.slice(0, MS_CAP); note = ' Only the first 600,000 characters will be reviewed.'; }
+    msChunks = chunkText(t);
+    const n = msChunks.length, mins = Math.max(1, Math.ceil(n * 10 / 60));
+    m.textContent = 'This manuscript will be reviewed in ' + n + ' part' + (n === 1 ? '' : 's') + ', using ' + n + ' AI request' + (n === 1 ? '' : 's') + ' (about ' + mins + ' minute' + (mins === 1 ? '' : 's') + '). Keep this page open.' + note;
+    $('#msGo').hidden = false;
+  });
+
+  async function msCall(text){
+    let tries = 0;
+    while (true){
+      try { return await api('analyze', { mode: 'manuscript', text, token }); }
+      catch (e){
+        if (e.status === 403 && tries < 1){
+          tries++;
+          const l = lic();
+          const c = await api('license', { action: 'check', key: l.key, instance: l.instance });
+          token = c.token;
+          continue;
+        }
+        if (e.status === 429 && tries < 2){ tries++; await sleep(20000); continue; }
+        throw e;
+      }
+    }
+  }
+
+  $('#msRun').addEventListener('click', async () => {
+    if (!msChunks.length) return;
+    msStopFlag = false;
+    $('#msRun').disabled = true;
+    $('#msStop').hidden = false;
+    $('#msResults').hidden = true;
+    const out = [], m = $('#msMsg');
+    m.className = 'msg';
+    let err = '';
+    for (let i = 0; i < msChunks.length; i++){
+      if (msStopFlag){ err = 'Stopped by you.'; break; }
+      m.textContent = 'Reading part ' + (i + 1) + ' of ' + msChunks.length + ' (' + msChunks[i].label + ')…';
+      try {
+        const d = await msCall(msChunks[i].text);
+        out.push({ i, label: msChunks[i].label, words: msChunks[i].text.split(/\s+/).filter(Boolean).length, r: d.result || {} });
+      } catch (e){
+        err = e instanceof TypeError ? 'The connection was lost.' : e.message;
+        break;
+      }
+    }
+    if (out.length) drawManuscript(out, msChunks.length);
+    if (err){
+      m.textContent = (out.length ? 'Stopped after ' + out.length + ' of ' + msChunks.length + ' parts. Results so far are shown below. ' : '') + err;
+      m.className = 'msg err';
+    } else {
+      m.textContent = 'Done. These are signals, not proof.';
+    }
+    $('#msRun').disabled = false;
+    $('#msStop').hidden = true;
+  });
+  $('#msStop').addEventListener('click', () => { msStopFlag = true; });
+
+  function drawManuscript(parts, total){
+    const box = $('#msResults');
+    const lv = x => ['low', 'mixed', 'high'].includes(String(x).toLowerCase()) ? String(x).toLowerCase() : 'mixed';
+    const val = { low: 0, mixed: 1, high: 2 };
+    const counts = { low: 0, mixed: 0, high: 0 };
+    parts.forEach(p => counts[lv(p.r.level)]++);
+    const avg = parts.reduce((a, p) => a + val[lv(p.r.level)], 0) / parts.length;
+    const overall = avg < 0.5 ? 'low' : avg < 1.3 ? 'mixed' : 'high';
+    const words = parts.reduce((a, p) => a + p.words, 0);
+    const heavy = parts.filter(p => val[lv(p.r.level)] > 0)
+      .sort((a, b) => val[lv(b.r.level)] - val[lv(a.r.level)] || (b.r.patterns || []).length - (a.r.patterns || []).length)
+      .slice(0, 3);
+
+    let h = '<h2>Manuscript report</h2>';
+    h += '<div class="metrics">' +
+      '<div class="m"><div class="mv">' + overall.toUpperCase() + '</div><div class="ml">Overall signals</div></div>' +
+      '<div class="m"><div class="mv">' + parts.length + ' / ' + total + '</div><div class="ml">Parts reviewed</div></div>' +
+      '<div class="m"><div class="mv">' + words.toLocaleString() + '</div><div class="ml">Words reviewed</div></div>' +
+      '<div class="m"><div class="mv">' + counts.high + '</div><div class="ml">High-signal parts</div></div></div>';
+    h += '<div class="ml" style="margin-bottom:6px">Each block is one part of the manuscript, in order. Tap a block to jump to it.</div><div class="strip">';
+    for (let i = 0; i < total; i++){
+      const p = parts.find(x => x.i === i);
+      h += p ? '<a class="seg ' + lv(p.r.level) + '" href="#msp' + i + '" title="' + esc(p.label) + ': ' + lv(p.r.level) + '"></a>' : '<span class="seg none" title="Not reviewed"></span>';
+    }
+    h += '</div>';
+    h += heavy.length
+      ? '<p class="sum">Parts with the strongest machine-like signals: ' + heavy.map(p => esc(p.label)).join(', ') + '.</p>'
+      : '<p class="sum">No part showed strong machine-like signals.</p>';
+    h += '<div class="btns2 row" style="margin:0 0 10px"><button class="ghost" id="msCopy" type="button">Copy summary</button><button class="ghost" id="msPrint" type="button">Save as PDF</button></div>';
+    parts.forEach(p => {
+      const r = p.r;
+      const pat = Array.isArray(r.patterns) ? r.patterns : [];
+      const so = Array.isArray(r.standouts) ? r.standouts : [];
+      const hm = Array.isArray(r.human_markers) ? r.human_markers : [];
+      h += '<details id="msp' + p.i + '"><summary><span class="chip ' + lv(r.level) + '">' + lv(r.level).toUpperCase() + '</span>' + esc(p.label) + '</summary><div class="pd">' +
+        (r.summary ? '<p>' + esc(r.summary) + '</p>' : '') +
+        (pat.length ? '<p>Patterns noticed:</p><ul>' + pat.slice(0, 4).map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '') +
+        (so.length ? '<p>Examples:</p><ul>' + so.slice(0, 3).map(x => '<li>“' + esc(x.quote || '') + '” — ' + esc(x.why || '') + '</li>').join('') + '</ul>' : '') +
+        (hm.length ? '<p>Sounds human: ' + hm.slice(0, 2).map(esc).join('; ') + '</p>' : '') +
+        '</div></details>';
+    });
+    h += '<p class="msg">These are signals, not proof of who wrote the text. Fiction by human writers can show the same patterns.</p>';
+    box.innerHTML = h;
+    box.hidden = false;
+    $('#msPrint').onclick = () => window.print();
+    $('#msCopy').onclick = () => {
+      const txt = 'Telltale manuscript report\nOverall signals: ' + overall.toUpperCase() + '\nParts reviewed: ' + parts.length + ' of ' + total + '\nWords reviewed: ' + words.toLocaleString() + '\n\n' +
+        parts.map(p => p.label + ': ' + lv(p.r.level).toUpperCase() + (p.r.summary ? ' - ' + p.r.summary : '')).join('\n') + '\n\nSignals, not proof.';
+      navigator.clipboard && navigator.clipboard.writeText(txt).then(() => { $('#msCopy').textContent = 'Copied'; setTimeout(() => $('#msCopy').textContent = 'Copy summary', 1500); }).catch(() => {});
+    };
     box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
