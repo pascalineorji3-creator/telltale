@@ -723,16 +723,16 @@
   const TELL_PATTERNS = [
     { re: /\bin today'?s (?:fast-paced|ever-changing|digital) world\b/gi, note: "the tell nobody needed" },
     { re: /\bit is important to note that\b/gi, note: "so note it, then" },
-    { re: /\bit'?s worth noting that\b/gi, note: "worth noting, or just say it" },
+    { re: /\bit(?:'s| is) worth noting that\b/gi, note: "worth noting, or just say it" },
     { re: /\bfurthermore\b/gi, note: "stiff transition" },
     { re: /\bmoreover\b/gi, note: "stiff transition" },
     { re: /\bin conclusion\b/gi, note: "essay-bot opener" },
-    { re: /\bleverage(?:d|s|ing)?\b/gi, note: "just say use" },
+    { re: /\blever(?:age|aged|ages|aging)\b/gi, note: "just say use" },
     { re: /\bunlock(?:s|ed|ing)? (?:the|a) (?:power|potential)\b/gi, note: "unlock what, exactly" },
     { re: /\bwide range of\b/gi, note: "vague on purpose?" },
     { re: /\bplays? a crucial role\b/gi, note: "crucial how?" },
     { re: /\bdrive meaningful (?:results|impact|change)\b/gi, note: "meaningful, how?" },
-    { re: /\bdelve into\b/gi, note: "classic filler verb" },
+    { re: /\bdelv(?:e|es|ed|ing) into\b/gi, note: "classic filler verb" },
     { re: /\bnavigate the complexit(?:y|ies)\b/gi, note: "navigate, complexities, sure" },
     { re: /\bat the end of the day\b/gi, note: "says nothing" },
     { re: /\bseamless(?:ly)?\b/gi, note: "nothing is ever seamless" },
@@ -742,7 +742,7 @@
     { re: /\brobust\b/gi, note: "vague strength word" },
     { re: /\bholistic\b/gi, note: "vague completeness word" },
     { re: /\bfoster(?:s|ed|ing)? (?:a sense of|collaboration|growth)\b/gi, note: "foster what, concretely" },
-    { re: /\bpaves? the way for\b/gi, note: "borrowed image" },
+    { re: /\b(?:paves?|paved|paving) the way for\b/gi, note: "borrowed image" },
     { re: /\bultimately\b/gi, note: "hedge word" }
   ];
 
