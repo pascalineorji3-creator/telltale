@@ -449,6 +449,13 @@
     .bars i{background:#000!important;opacity:1!important}
     .dbar i{background:#000!important}
   }
+  @media (max-width:860px){
+    .page-shadow-cast{display:contents}
+    .page{order:1}
+    .margin-col{order:2}
+    .try-panel{order:3}
+    .editor{order:4}
+  }
 </style>
 </head>
 <body>
@@ -540,7 +547,7 @@
     <p class="sub">Use the free tools as much as you like. Pro adds deep review of long documents, higher limits, and registered devices, unlocked with a license key.</p>
     <div class="pg">
       <div class="plan"><h3>Free</h3><div class="price">$0</div><ul><li>Phrase markup in your browser</li><li>Signal report and rhythm chart</li><li>AI editor and rewrite coach, with a daily limit</li><li>Upload .txt, .docx and text-based .pdf, whole-document report</li><li>Local history and Save as PDF</li></ul></div>
-      <div class="plan pro"><h3>Pro</h3><div class="price">Custom pricing</div><ul><li>Deep AI review of every paragraph in a long document</li><li>30,000 characters per AI run and higher limits</li><li>Registered devices, checked on the server</li><li>License key delivered after purchase</li></ul><a class="try-btn" href="/pro.html" style="text-decoration:none;display:inline-block;margin-top:16px">Get Pro</a></div>
+      <div class="plan pro"><h3>Pro</h3><div class="price">Custom pricing</div><ul><li>Deep AI review of every paragraph in a long document</li><li>30,000 characters per AI run and higher limits</li><li>Manuscript mode for book-length fiction</li><li>Registered devices, checked on the server</li><li>License key delivered after purchase</li></ul><a class="try-btn" href="/pro.html" style="text-decoration:none;display:inline-block;margin-top:16px">Get Pro</a></div>
     </div>
     <div id="request" style="margin-top:34px">
       <div class="eyebrow">Request a license</div>
@@ -584,9 +591,9 @@
     flags: [
       { quote: "In today's fast-paced world", note: "the tell nobody needed" },
       { quote: "it is important to note that", note: "so note it, then" },
-      { quote: "Furthermore, by leveraging the power of", note: "leveraging power of what" },
+      { quote: "Furthermore, by leveraging the power of", note: "leveraging the power of what?" },
       { quote: "unlock a wide range of benefits", note: "vague on purpose?" },
-      { quote: "ultimately drive meaningful results", note: "meaningful, how" }
+      { quote: "ultimately drive meaningful results", note: "meaningful, how?" }
     ]
   };
 
@@ -723,13 +730,13 @@
     { re: /\bleverage(?:d|s|ing)?\b/gi, note: "just say use" },
     { re: /\bunlock(?:s|ed|ing)? (?:the|a) (?:power|potential)\b/gi, note: "unlock what, exactly" },
     { re: /\bwide range of\b/gi, note: "vague on purpose?" },
-    { re: /\bplays? a crucial role\b/gi, note: "crucial how" },
-    { re: /\bdrive meaningful (?:results|impact|change)\b/gi, note: "meaningful, how" },
+    { re: /\bplays? a crucial role\b/gi, note: "crucial how?" },
+    { re: /\bdrive meaningful (?:results|impact|change)\b/gi, note: "meaningful, how?" },
     { re: /\bdelve into\b/gi, note: "classic filler verb" },
     { re: /\bnavigate the complexit(?:y|ies)\b/gi, note: "navigate, complexities, sure" },
     { re: /\bat the end of the day\b/gi, note: "says nothing" },
     { re: /\bseamless(?:ly)?\b/gi, note: "nothing is ever seamless" },
-    { re: /\bcutting-edge\b/gi, note: "cutting edge of what" },
+    { re: /\bcutting-edge\b/gi, note: "cutting edge of what?" },
     { re: /\bgame-chang(?:er|ing)\b/gi, note: "is it, though" },
     { re: /\bin the realm of\b/gi, note: "just name the thing" },
     { re: /\brobust\b/gi, note: "vague strength word" },
@@ -835,6 +842,7 @@
       editorStatus.textContent = signals.length
         ? "The AI editor marked it up. Hover a circle or a note to see why."
         : "The AI editor found nothing strong to circle.";
+      if (data.truncated) editorStatus.textContent += " Only the first " + Number(data.limit || 8000).toLocaleString() + " characters were read. Pro reads up to 30,000, and Manuscript mode covers whole books.";
     } catch (e){
       editorStatus.textContent = e.message || "Something went wrong. Try again.";
       editorStatus.classList.add('err');
@@ -988,4 +996,4 @@
 </script>
 
 </body>
-            </html>
+</html>
